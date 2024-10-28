@@ -122,3 +122,7 @@ async def lifespan(app: FastAPI):
    #     await conn.run_sync(Base.metadata.create_all)  # `create_all`  без скобок ()
     yield
 ```
+## Далее
+Создаем новую модель `User` в `core` (пока только поле `username`) и создаем новую миграцию
+- `alembic revision --autogenerate -m "Create users table"` (проверить миграция)
+- `alembic upgrade head` - выполняем миграцию
