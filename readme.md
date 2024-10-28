@@ -133,4 +133,15 @@ async def lifespan(app: FastAPI):
 p.s. "user_id" - формируется 'user' в нижнем регистре +(s) и через подчеркивание `id`
 Затем создаем новую миграцию:
 - `alembic revision --autogenerate -m "Create posts table"` (проверить миграция)
-- `alembic upgrade head` - выполняем миграцию
+- `alembic upgrade head` - выполняем миграцию 'Post', , появилась таблица в БД.
+
+Создаем новую модель `Profile`, которая будет связана с моделью `User` через связь `one to one` 
+Там есть повторяющая запись типа `user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), unique=True)`
+Чтобы не было повторений, создаем новый класс Mixin (файл mixins.py, перевод - примесь)
+И в конце дополняем класс "User" строкой   `profile: Mapped["Profile"] = relationship(back_populates="user")`  
+
+Создал миграцию `alembic revision --autogenerate -m "Create profile table"` - не пригодилось, изменений в моделях нет.
+Добавил "Profile" `в __init__.py (core.models)`
+Снова создал миграцию `alembic revision --autogenerate -m "Create profile table"`.
+Теперь миграция создалась для модели `Profile`
+Далее, `alembic upgrade head` - выполняем миграцию на `Profile`, появилась таблица в БД.  
