@@ -126,3 +126,11 @@ async def lifespan(app: FastAPI):
 Создаем новую модель `User` в `core` (пока только поле `username`) и создаем новую миграцию
 - `alembic revision --autogenerate -m "Create users table"` (проверить миграция)
 - `alembic upgrade head` - выполняем миграцию
+
+Создаем еще одну модель `Post` (поля - title, body).
+И в этом моделе создаем внешний ключ `users.id` для связи моделей User->Post (one to many)
+`user_id = Mapped[int] = mapped_column(ForeignKey("users.id"))` 
+p.s. "user_id" - формируется 'user' в нижнем регистре +(s) и через подчеркивание `id`
+Затем создаем новую миграцию:
+- `alembic revision --autogenerate -m "Create posts table"` (проверить миграция)
+- `alembic upgrade head` - выполняем миграцию
