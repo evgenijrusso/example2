@@ -33,7 +33,7 @@ target_metadata = Base.metadata
 # переопределяем `sqlalchemy.url` (из alembic.ini)
 config.set_main_option(
     "sqlalchemy.url",
-    settings.db_url,
+    settings.db.url,
 )
 
 
