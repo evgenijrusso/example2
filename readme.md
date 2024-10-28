@@ -90,3 +90,27 @@ target_metadata = Base.metadata
 - `alembic revision --autogenerate -m "Create products table"`
 Учитывая то, что у нас модель уже сформирована, `alembic` сравнивает модель и БД и видит, что в данном случае нет изменений.
 Т.е. эту миграцию можно удалить.
+Далее, для проверки, удаляем базу данных. И потом снова запускаем миграцию. В миграции уже формируется снова модель "Продукт".
+P.s. Пока миграцию еще не реализовали (не задействовали), ее можно удалить. В БД ее еще нет.
+
+## alembic.ini
+Для форматирования кода миграции, в `alembic.ini` `использует black`
+Было:
+```
+# format using "black" - use the console_scripts runner, against the "black" entrypoint
+# hooks = black
+# black.type = console_scripts
+# black.entrypoint = black
+# black.options = -l 79 REVISION_SCRIPT_FILENAME
+```
+Стало:
+```
+# format using "black" - use the console_scripts runner, against the "black" entrypoint
+hooks = black
+black.type = console_scripts
+black.entrypoint = black
+black.options = -l 89 REVISION_SCRIPT_FILENAME
+```
+Для изменения БД используется команда `alembic upgrade head`
+Для отката текущей миграции используется команда: `alembic downgrade -1`
+Рекомендуется сначало коммитет изменения в проекте, а только потом файл миграции
