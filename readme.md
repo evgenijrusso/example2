@@ -114,3 +114,11 @@ black.options = -l 89 REVISION_SCRIPT_FILENAME
 Для изменения БД используется команда `alembic upgrade head`
 Для отката текущей миграции используется команда: `alembic downgrade -1`
 Рекомендуется сначало коммитет изменения в проекте, а только потом файл миграции
+
+Теперь можно отказаться от кода `....db_helper.engine.begin()`
+```
+async def lifespan(app: FastAPI):
+   # async with db_helper.engine.begin() as conn:
+   #     await conn.run_sync(Base.metadata.create_all)  # `create_all`  без скобок ()
+    yield
+```
