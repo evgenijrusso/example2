@@ -76,4 +76,17 @@ async def session_dependency(self) -> AsyncSession:
 Выбор варианта: async - `Generic single-database configuration with an async dbapi`
 - `alembic init alembic` (простой вариант)
 - `alembic init -t async alembic` (варианта для асинхронного движка)
-- `alembic revision -m "create account table"`
+- `alembic revision -m "create account table"`  
+Можно использования автомиграцию. В  файле `.env.py` укажем, откуда брать информацию в существующих таблицах. 
+И нам достаточно указать в файле `.env.py`
+```.env.ini
+# target_metadata = None   -- эту строку комментируем
+from core.models import Base -- добавляем импорт Base
+from core.config import settings  --  добавляем импорт settings (чтобы скорректировать путь к БД)
+target_metadata = Base.metadata 
+# далее переопределяем `sqlalchemy.url` (из alembic.ini - sqlalchemy.url = driver://user:pass@localhost/dbname)
+```
+## Создаем автомиграцию
+- `alembic revision --autogenerate -m "Create products table"`
+Учитывая то, что у нас модель уже сформирована, `alembic` сравнивает модель и БД и видит, что в данном случае нет изменений.
+Т.е. эту миграцию можно удалить.
