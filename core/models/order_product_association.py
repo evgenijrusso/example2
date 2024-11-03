@@ -1,5 +1,4 @@
 from typing import TYPE_CHECKING
-from pygments.lexer import default
 from sqlalchemy import ForeignKey, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
