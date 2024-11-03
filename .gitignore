@@ -1,2 +1,25 @@
-/pyproject.toml
-/.idea/
+.idea/
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+
+# Translations
+*.mo
+*.pot
+
+# Django stuff:
+*.log
+db_example2.sqlite3
+
+# Sphinx documentation
+docs/_build/
+
+# Environments
+.env
+env/
+ENV/
+env.bak/

@@ -157,3 +157,172 @@ p.s. "user_id" - формируется 'user' в нижнем регистре 
 
 - Можно удалить все `alembic downgrade base` - удалил все миграции
 `alembic upgrade head` - восстановил все миграции
+
+## def get_users_with_posts():  -- несколько вариантов
+```py 
+# 1-вариант
+from sqlalchemy.engine import Result
+from sqlalchemy.orm import joinedload, selectinload
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+from core.models import User
+
+async def get_users_with_posts1(session: AsyncSession):
+    stmt = select(User).options(joinedload(User.posts)).order_by(User.id)
+    users = await session.scalars(stmt)           # 1-й вариант
+    
+    for user in users.unique():
+        print("**" * 10)
+        print("User: ", user)
+        for post in user.posts:  # type: User.posts
+            print("User_posts: ", post.title, " ", post.body)
+
+# 2-вариант
+async def get_users_with_posts2(session: AsyncSession):
+    stmt = select(User).options(joinedload(User.posts)).order_by(User.id)
+    result: Result = await session.execute(stmt)  # 2-й вариант
+    users = result.unique().scalars()  # 2-й вариант
+
+    for user in users:
+        print("**" * 10)
+        print("User: ", user)
+        for post in user.posts:  # type: User.posts
+            print("User_posts: ", post.title, " ", post.body)
+
+# 3-вариант
+async def get_users_with_posts3(session: AsyncSession):
+    stmt = select(User).options(selectinload(User.posts)).order_by(User.id)
+    result: Result = await session.execute(stmt)  # 3-й вариант
+    users = result.scalars()  # 3-й вариант
+
+    for user in users:
+        print("**" * 10)
+        print("User: ", user)
+        for post in user.posts:  # type: User.posts
+            print("User_posts: ", post.title, " ", post.body)
+
+# 4-вариант
+async def get_users_with_posts4(session: AsyncSession):
+    stmt = select(User).options(selectinload(User.posts)).order_by(User.id)
+    users = await session.scalars(stmt)
+
+    # ... далее то же самое
+```
+
+## Третье видео посвящено отношение много-ко-много
+- В core.models создаем новый файл `order.py` (Заказ) и копируем пока данные из `product.py`  
+```
+class Order(Base):
+    promocode: Mapped[str]
+    create_at: Mapped[datetime] = mapped_column(
+        server_default=func.now(),
+        default=datetime.now(timezone.utc),  # в оригинале - datetime.utcnow
+    )
+```
+- создаем миграцию `alembic revision --autogenerate -m "Create orders table"`
+- удалил миграцию для изменения поля `promocode`. Нужно `promocode: Mapped[str | None]`
+- создаем новый файл `order_product_association` и в нес создаем класс `order_product_association_table`.
+Это промежуточная таблица в формате `many-to-many`  и используется именно (старый метод)  в `core` (не в `ord`).
+```python
+from sqlalchemy import Table, Column, ForeignKey
+from core.models.database import Base
+
+order_product_association_table = Table(
+    "order_product_association",
+    Base.metadata,
+    Column("order_id", ForeignKey("orders.id"), primary_key=True),
+    Column("product_id", ForeignKey("products.id"), primary_key=True),
+)
+```
+Эта таблица будет работать. Но для, чтобы потом не делать возможные миграции, эту таблицу можно изменить.
+Добавим с нее дополнительно `id` с `primary_key`, а колонках "order_id" и "product_id" уберем.
+```python
+from sqlalchemy import Table, Column, Integer, ForeignKey, UniqueConstraint
+from  core.models.database import Base
+
+order_product_association_table = Table(
+    "order_product_association",
+    Base.metadata,
+    Column("id", Integer, primary_key=True),
+    Column("order_id", ForeignKey("orders.id"), nullable=False),
+    Column("product_id", ForeignKey("products.id"), nullable=False),
+    UniqueConstraint("order_id", "product_id", name="idx_unique_order_product"),
+)
+```
+Создаем миграцию `alembic revision --autogenerate -m "Create order product association table"`
+Выполняем  миграцию `alembic upgrade head`
+
+## Запросы по m2m (сделал в другом файле crud_m2m)
+- создаем функцию `create_order`
+- создаем функцию `create_product`
+И создаем несколько товаров и заказов в `demo_m2m`
+- После проверки функции `get_order_with_products`(`crud_m2m`), предложено изменить таблицу 
+`order_product_association_table` (см. выше), добавляя класс для работы с алхимией.
+```python
+from sqlalchemy import ForeignKey, UniqueConstraint
+from sqlalchemy.orm import Mapped, mapped_column
+
+from core.models.database import Base
+
+class OrderProductAssociation(Base):
+    __tablename__ = "order_product_association"
+    __table_args__ = (
+        UniqueConstraint(
+            "order_id",
+            "product_id",
+            name="idx_unique_order_product",
+        )
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    order_id: Mapped[int] = mapped_column(ForeignKey("orders.id"))
+    product_id: Mapped[int] = mapped_column(ForeignKey("products.id"))
+```
+Изменение таблица "Product", "Order" и правим `__init__.py`
+```python
+from typing import TYPE_CHECKING
+from sqlalchemy.orm import Mapped, relationship
+from core.models.database import Base
+
+if TYPE_CHECKING:
+    from core.models import Order
+
+class Product(Base):
+    # __tablename__ = "products" #  убрал название таблицы. Оно реализуется через `Base` (database)
+
+    name: Mapped[str]
+    description: Mapped[str]
+    price: Mapped[int]
+    orders: Mapped[list[Order]] = relationship(
+        secondary="order_product_association",
+        back_populates="products",
+    )
+```
+- Добавляем некоторые свойства в класс `OrderProductAssociation`. 
+```
+    count: Mapped[int] = mapped_column(ForeignKey("products.id"))
+```
+- Новые изменения. Временно отключаем в классах `Order` и `Product` соответственно поля `products` и `order`.
+В функции `demo_m2m` убираем  код
+``` 
+ orders = await get_order_with_products(session)
+    for order in orders:
+        print("**" * 10)
+        print("Order:", order.id, order.promocode, " ", order.create_at)
+        for product in order.products:  # type: Product
+            print(
+                "products: ",
+                product.id,
+                product.name,
+                product.description,
+                product.price,
+            )
+ ```
+- Возращаем обратно в классах `Order` и `Product` соответственно поля `products` и `order`.
+- Судя по всему, можно использовать, например, в `Order` либо  поле `products`, либо поле `products_details`
+- Снова отключаем в классах `Order` и `Product` соответственно поля `products` и `order`. В классе 
+`OrderProductAssociation` добавляем поле `unit_price[int]` и 
+- создаем миграцию `alembic revision --autogenerate -m "Add unit_price column to order product association table"`
+Выполняем  миграцию `alembic upgrade head`
+- Переопределяем функцию `get_order_with_products_with__assoc() -> get_order_with_products_assoc()`
+P.s. Сложно. Так и не понял, клда использовать ассоциативную модель, а когда сквозную модель.
