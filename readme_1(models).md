@@ -326,3 +326,6 @@ class Product(Base):
 Выполняем  миграцию `alembic upgrade head`
 - Переопределяем функцию `get_order_with_products_with__assoc() -> get_order_with_products_assoc()`
 P.s. Сложно. Так и не понял, клда использовать ассоциативную модель, а когда сквозную модель.
+
+
+  
